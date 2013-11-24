@@ -1,0 +1,2 @@
+[time,utilization] = parse_noia('noia');
+plot(time, utiliza
