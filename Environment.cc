@@ -38,14 +38,15 @@ void Environment::process(){
 			v.paperAlgorithmWithIA();
 		}else if(Setting::read().Algorithm.compare("PaperWithoutIA")==0){
 			v.paperAlgorithm();
+		}else if(Setting::read().Algorithm.compare("PureQuery")==0){
+			v.pureQueryAlgorithm();
 		}
-		
 	}
 }
 
 void Environment::generatePoissonVehicles(std::vector<Vehicle> & vehicles){
 	//Expected vehicles per second
-	double lambda = 1;
+	double lambda = Setting::read().lambda;
 	double threshold = lambda*Timer::getTimeStep();
 	double r = ((double)rand())/((double)RAND_MAX);
 	if(r<threshold){
@@ -57,12 +58,13 @@ void Environment::generatePoissonVehicles(std::vector<Vehicle> & vehicles){
 
 void Environment::generateOneVehicle(std::vector<Vehicle> & vehicles){
 	static long id = 0;
-	double meanSpeedInMeterPerSecond = 30;
+	double meanSpeedInMeterPerSecond = Setting::read().speed;
+	double speedRange = Setting::read().speedRange;
 	//A random number uniformly distributed (0, 1];
 	double r = ((double)rand())/((double)RAND_MAX);
 	//A random speed generated as uniformly distributed in +-10% mean speed
-	double speed = r*(meanSpeedInMeterPerSecond*0.2) 
-					+ 0.9*meanSpeedInMeterPerSecond;
+	double speed = r*(meanSpeedInMeterPerSecond*speedRange*2.0) 
+					+ (1-speedRange)*meanSpeedInMeterPerSecond;
 	//generate a vehicle	
 	Vehicle v(id, speed);
 	vehicles.push_back(v);

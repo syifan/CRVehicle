@@ -10,6 +10,8 @@ public:
 	Vehicle(long id, double speed);
 
 	void move();
+
+	void pureQueryAlgorithm();
 	void paperAlgorithm();
 	void paperAlgorithmWithIA();
 

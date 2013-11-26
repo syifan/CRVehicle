@@ -42,6 +42,24 @@ void Vehicle::move(){
 	}
 }
 
+void Vehicle::pureQueryAlgorithm(){
+	//std::cout<< __FUNCTION__ << std::endl;
+	if(disabled) return;
+	if(disabled) return;
+	switch(mode){
+	case 0:
+		if(this->needSpectrumInfo()){
+			mode = 1;
+		}
+		break;
+	case 1:
+		this->queryDatabase();
+		this->channelFound();
+		mode = 0;
+		break;
+	}
+}
+
 void Vehicle::paperAlgorithm(){
 	// std::cout<< __FUNCTION__ << std::endl;
 	if(disabled) return;

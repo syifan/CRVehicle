@@ -7,8 +7,11 @@
 
 class Setting{
 public:
+
 	static Setting& getInstance();
 	static Setting& read();
+
+	static void parseCommandLineOptions(int argc, char** argv);
 
 	std::string Algorithm;
 	//base stations 
@@ -17,6 +20,10 @@ public:
 	double baseStationExtendCoverage;
 	//vehicle related;
 	double disappearPos;
+	//vehicle generate parameter
+	double lambda;
+	double speed;
+	double speedRange;
 	//timer related
 	double timeStep;
 	double endTime;
@@ -25,6 +32,7 @@ public:
 	bool isParciallyLog;
 	double logStartPos;
 	double logEndPos;
+	std::string logName;
 
 private:
 	Setting();

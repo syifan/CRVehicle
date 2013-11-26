@@ -10,10 +10,14 @@
 
 
 Logger::Logger(){
-	time_t timer;
-	timer = time(NULL);
 	std::stringstream filename;
-	filename << "" << timer << ".log";
+	if(Setting::read().logName.compare("")==0){
+		time_t timer;
+		timer = time(NULL);
+		filename << "" << timer << ".log";
+	}else{
+		filename << Setting::read().logName << ".log";
+	}
 	this->logFile.open(filename.str().c_str(), std::ios::out);
 	std::cout<<"log " << filename.str() << " created" << std::endl;
 	if(!logFile.is_open()){
