@@ -30,6 +30,7 @@ Environment::Environment(){
 
 void Environment::process(){
 	Environment& e = Environment::getInstance();
+	e.channelOccupied = false;
 	e.generatePoissonVehicles(e.vehicles);
 	for(uint i = 0; i<e.vehicles.size(); i++){
 		Vehicle& v = e.vehicles[i];
@@ -40,6 +41,8 @@ void Environment::process(){
 			v.paperAlgorithm();
 		}else if(Setting::read().Algorithm.compare("PureQuery")==0){
 			v.pureQueryAlgorithm();
+		}else if(Setting::read().Algorithm.compare("CSMA")==0){
+			v.CSMACA();
 		}
 	}
 }
@@ -76,6 +79,12 @@ void Environment::generateOneVehicle(std::vector<Vehicle> & vehicles){
 
 void Environment::addCorrelationInfo(double position){
 	Environment& e = Environment::getInstance();
+	if(e.lookUpCorrelationDatabaseAux(
+			position, 0, e.correlationDatabase.size()-1, 1
+		)
+	){
+		return;
+	}
 	//get current time
 	double currentTime = Timer::getCurrentTime();
 	//Prepare a correlation info data structure
@@ -103,14 +112,16 @@ bool Environment::lookUpCorrelationDatabase(double position){
 
 
 bool Environment::lookUpCorrelationDatabaseAux(
-	double position, int left, int right
+	double position, int left, int right, double correlationMaxDist
 ){
-	// std::cout << "left: " << left << "right: "<< right << std::endl; 
+	//std::cout << "left: " << left << "right: "<< right << std::endl; 
 	int middle = (left+right)/2;
 	// If correlation info reported in correlationMaxDist meters, it is believed
 	// as correlation exist
-	double correlationMaxDist = 100;
-	if(left==right){
+	//double correlationMaxDist = 100;
+	if(left>right || left<0 || right<0){
+		return false;
+	}if(left==right){
 		return abs(correlationDatabase[left].getPosition() - position)
 			<correlationMaxDist;
 	}else if(

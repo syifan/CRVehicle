@@ -31,6 +31,8 @@ void Setting::parseCommandLineOptions(int argc, char** argv){
 				valid = true;
 			}else if(strcmp(optarg, "PureQuery")==0){
 				valid = true;
+			}else if(strcmp(optarg, "CSMA")==0){
+				valid = true;
 			}
 			if(!valid){
 				std::cerr << "Algorithm not valid!\n";
@@ -80,8 +82,8 @@ Setting::Setting(){
 	speed = 30;
 	speedRange = 0.1;
 	//timer related
-	timeStep = 1e-5;
-	endTime = 1000;
+	timeStep = 1e-2;
+	endTime = 10000;
 	numNotificationPoints = 100;
 
 	//log related

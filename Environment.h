@@ -58,6 +58,13 @@ public:
 	* Responds to IA preamble and lets the vehicle know spectrum info
 	*/
 	static void receiveIAPreamble(int id, double pos);
+
+	static bool isChannelOccupied(){
+		return Environment::getInstance().channelOccupied;
+	};
+	static void occupyChannel(){
+		Environment::getInstance().channelOccupied = true;
+	}
 private:
 	Environment();
 	Environment(Environment const&);
@@ -69,7 +76,9 @@ private:
 	void generatePoissonVehicles(std::vector<Vehicle> & vehicles);
 
 
-	bool lookUpCorrelationDatabaseAux(double position, int left, int right);
+	bool lookUpCorrelationDatabaseAux(
+		double position, int left, int right, double maxCorrelationDist=100
+	);
 
 	/**
 	* Generate a vehicle and put it into the vehicles vector
@@ -92,7 +101,8 @@ private:
 	* that. So, I put all of correlation info in a centralized database. 
 	*/
 	std::vector<CorrelationInfo> correlationDatabase; 
-
+	
+	bool channelOccupied;
 };
 
 #endif

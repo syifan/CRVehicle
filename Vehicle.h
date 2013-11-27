@@ -14,6 +14,7 @@ public:
 	void pureQueryAlgorithm();
 	void paperAlgorithm();
 	void paperAlgorithmWithIA();
+	void CSMACA();
 
 	std::string str();
 	
@@ -40,6 +41,12 @@ protected:
 	};
 
 	std::vector<KnownSpectrumRange> localSpectrumInfo;
+
+	void CSMACAAlgorithm();
+	//CSMA related;
+	int outputBuffer;
+
+	int getBackoffTimer(int retry);
 
 	/**
 	* Judges if the vehicle enters a new region, 

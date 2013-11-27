@@ -1,26 +1,22 @@
-function [ time, utilization ] = parse_noia( filename )
-%PARSE_NOIA Summary of this function goes here
+function [ time, num_query ] = parse_num_query( filename )
+%PARSE_NUM_QUERY Summary of this function goes here
 %   Detailed explanation goes here
     fprintf('Parsing %s\n', strcat('../' , filename , '.log') )
     time = [];
-    utilization = [];
-    slotused = 0;
+    num_query = [];
+    query_used = 0;
     carcovered = 0;
 
     i = 1;
     logFile = fopen(strcat('../',filename,'.log'));
     tline = fgetl(logFile);
-    
+    fprintf('Parsing %s\n', strcat('../' , filename , '.log') )
     while ischar(tline)
         tokens = strsplit(tline);
         if(strcmp(tokens(3), 'query_database'))
-            slotused = slotused + 2;
-        elseif(strcmp(tokens(3), 'broadcast_correlation'))
-            slotused = slotused + 1;
-        elseif(strcmp(tokens(3), 'channel_found'))
-            carcovered = carcovered+1;
+            query_used = query_used + 2;
             time(i) = str2double(tokens(1));
-            utilization(i) = slotused; 
+            num_query(i) = query_used; 
             i = i+1;
         end
 

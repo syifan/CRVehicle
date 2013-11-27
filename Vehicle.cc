@@ -134,6 +134,47 @@ void Vehicle::paperAlgorithmWithIA(){
 	}
 }
 
+void Vehicle::CSMACA(){
+	if(disabled) return;
+	switch(mode){
+		case 0:
+			if(this->needSpectrumInfo()){
+				mode = 1;
+			}
+			break;
+		case 1:
+			bool needToQuery = false;
+			if(!this->lookUpLocalSpectrumInfo()){
+				if(this->isCorrelationInfoExist()){
+					if(this->isWSRSSIGreaterThanTH()){
+						needToQuery = true;
+					}else{
+						if(this->isCellularRSSIGreaterThanTH()){
+						}else{
+							needToQuery = true;
+						}
+					}
+				}else{
+					needToQuery = true;
+				}
+			}
+			if(needToQuery){
+				this->queryDatabase();
+				this->outputBuffer++;
+				if(this->isCorrelationExist()){
+					this->broadcastCorrelation();
+					this->outputBuffer++;
+				}
+			}
+			this->CSMACAAlgorithm();
+			this->channelFound();
+
+			mode = 0;
+			break;
+		
+	}
+}
+
 bool Vehicle::needSpectrumInfo(){
 	
 	double distSinceLastSense = abs(this->position - lastSensePos);
@@ -160,7 +201,7 @@ bool Vehicle::isCorrelationInfoExist(){
 }
 
 bool Vehicle::isCorrelationExist(){
-	double threshold = 0.5;
+	double threshold = 0.3;
 	double r = ((double)rand())/((double)RAND_MAX);
 	if(r<threshold){
 		return true;
@@ -178,6 +219,7 @@ bool Vehicle::isWSRSSIGreaterThanTH(){
 		return false;
 	}
 }
+
 
 bool Vehicle::isCellularRSSIGreaterThanTH(){
 	double threshold = 0.9;
@@ -260,9 +302,109 @@ void Vehicle::addLocalSpectrumInfo(double start, double end){
 
 
 
+void Vehicle::CSMACAAlgorithm(){
+	static int state = 0;
+	static int ifs_timer;
+	static int default_difs = 3; 
+	//static int default_sifs = 1;
+	static int backoff_timer;
+	static int num_retry;
+	std::stringstream ss;
+	if(disabled) return;
+	switch(state){
+		case 0:
+			if(this->outputBuffer>0){
+				state = 1;
+				ifs_timer = default_difs;
+			}
+			break;
+		case 1: //DIFTS
+		   	ss << " difs ";	
+			Logger::log(this->position, this->str()+ss.str());
 
+			if(Environment::isChannelOccupied()){
+				state = 2;
+				backoff_timer = getBackoffTimer(num_retry);
+				num_retry++;
+			}else{
+				ifs_timer--;
+				if(ifs_timer<0){
+					state = 2;
+					backoff_timer = getBackoffTimer(num_retry);
+				}
+			}
+			break;
+		case 2: //backoff
+		    ss << " backoff ";	
+			Logger::log(this->position, this->str()+ss.str());
+			if(!Environment::isChannelOccupied()){
+				backoff_timer--;
+				if(backoff_timer<0){
+					state = 3;
+				} 
+			}else{
+				state = 0;
+			}
+			break;
+		case 3: //transmitting
+			ss << " RTS ";	
+			Logger::log(this->position, this->str()+ss.str());
+			state = 4;
+			Environment::occupyChannel();
+			break;
+		case 4: //sift for CTS
+			ss << " sifs";
+			Logger::log(this->position, this->str()+ss.str());
+			state = 5;
+			break;
+		case 5:
+			ss << "CTS ";
+			Logger::log(this->position, this->str()+ss.str());
+			state = 6;
+			Environment::occupyChannel();
+			break;
+		case 6:
+			ss << "sifs";
+			Logger::log(this->position, this->str()+ss.str());
+			state = 7;
+			break;
+		case 7:
+			ss << "data";
+			Logger::log(this->position, this->str()+ss.str());
+			state = 8;
+			Environment::occupyChannel();
+			break;
+		case 8:
+			ss << "sifs";
+			Logger::log(this->position, this->str()+ss.str());
+			state = 9;
+			break;
+		case 9:
+			ss << "ack";
+			Logger::log(this->position, this->str()+ss.str());
+			Environment::occupyChannel();
+			this->outputBuffer--;
+			num_retry = 0;
+			state = 0;
+			break;
+	}
+}
 
-
-
+int Vehicle::getBackoffTimer(int retry){
+	int cw_min = 15;
+	int cw_max = 0;
+	int cw = 0;
+	if(retry==0){
+		return cw_min;
+	}else{
+		cw_max = cw_min * ( 2 * retry );
+		if(cw_max>1023){
+			cw_max = 1023;
+		}
+		cw = rand()%(cw_max-cw_min)+cw_min;
+		return cw;
+	}
+	return cw;
+}	
 
 
