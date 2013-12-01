@@ -18,8 +18,12 @@ private:
 	void operator=(Logger const&);
 
 	void write(std::string str);
+	void writeCSV(std::string str);
+	
+	void logcsv(std::string event);
 
 	std::ofstream logFile;
+	std::ofstream csvFile;
 
 	bool started;
 

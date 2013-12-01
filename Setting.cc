@@ -19,7 +19,7 @@ Setting& Setting::getInstance(){
 void Setting::parseCommandLineOptions(int argc, char** argv){
 	int c;
 	Setting& setting = Setting::getInstance();
-	while( (c = getopt(argc, argv, "a:o::l::v::"))!=-1 ){
+	while( (c = getopt(argc, argv, "a:o::d::v::r::"))!=-1 ){
 		printf("optopt=%c, optarg=%s\n", optopt, optarg);
 		switch(c){
 		case 'a':{
@@ -46,20 +46,28 @@ void Setting::parseCommandLineOptions(int argc, char** argv){
 			printf("option=o, optopt=%c, optarg=%s\n", optopt, optarg);
 			setting.logName = optarg;
 			break;
-		case 'l':
-			printf("option=l, optopt=%c, optarg=%s, lambda=%f\n", 
-				optopt, optarg, setting.lambda);
+		case 'd':
+			printf("option=d, optopt=%c, optarg=%s, lambda=%f\n", 
+				optopt, optarg, setting.meanDist);
 
-			setting.lambda = atof(optarg);
-						break;
+			setting.meanDist = atof(optarg);
+			break;
 		case 'v':
 			printf("option=v, optopt=%c, optarg=%s, speed=%f\n", 
 				optopt, optarg, setting.speed);
 
 			setting.speed = atof(optarg);
 			break;
+		case 'r':
+			printf("option=v, optopt=%c, optarg=%s, useRealData=%d\n", 
+				optopt, optarg, setting.useRealData);
+			setting.useRealData = atoi(optarg);
+			break;
 		}
 	}
+	
+	setting.lambda = setting.speed/setting.meanDist;
+	std::cout << "lambda: " << setting.lambda << std::endl;
 }
 
 Setting::Setting(){
@@ -69,21 +77,22 @@ Setting::Setting(){
 
 
 	//base stations
+	this->baseStationLocation.push_back(500);
 	this->baseStationLocation.push_back(1500);
-	this->baseStationLocation.push_back(2500);
 	this->baseStationBasicCoverage = 500;
 	this->baseStationExtendCoverage = 3*baseStationBasicCoverage;
 
 	//vehicle related
-	disappearPos = 3000;	
+	disappearPos = 2000;	
 
 	//vehicle generate parameter
-	lambda = 1;
+	meanDist = 30;
 	speed = 30;
 	speedRange = 0.1;
+	lambda = speed/meanDist;
 	//timer related
-	timeStep = 1e-2;
-	endTime = 10000;
+	timeStep = 2e-3;
+	endTime = 1000;
 	numNotificationPoints = 100;
 
 	//log related
@@ -91,4 +100,6 @@ Setting::Setting(){
 	logEndPos = 2000;
 	isParciallyLog = false;
 	logName = "";
+	//Whether or not use real data
+	useRealData=0;
 }

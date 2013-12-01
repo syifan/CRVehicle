@@ -19,6 +19,7 @@ public:
 	std::string str();
 	
 	void addLocalSpectrumInfo(double start, double end);
+	bool isDisabled(){return this->disabled;}
 protected:
 	long id;
 	//0 for transmitting;
@@ -38,6 +39,7 @@ protected:
 	struct KnownSpectrumRange{
 		double start;
 		double end;
+		double time;
 	};
 
 	std::vector<KnownSpectrumRange> localSpectrumInfo;

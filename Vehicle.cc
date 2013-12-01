@@ -144,19 +144,17 @@ void Vehicle::CSMACA(){
 			break;
 		case 1:
 			bool needToQuery = false;
-			if(!this->lookUpLocalSpectrumInfo()){
-				if(this->isCorrelationInfoExist()){
-					if(this->isWSRSSIGreaterThanTH()){
-						needToQuery = true;
-					}else{
-						if(this->isCellularRSSIGreaterThanTH()){
-						}else{
-							needToQuery = true;
-						}
-					}
-				}else{
+			if(this->isCorrelationInfoExist()){
+				if(this->isWSRSSIGreaterThanTH()){
 					needToQuery = true;
+				}else{
+					if(this->isCellularRSSIGreaterThanTH()){
+					}else{
+						needToQuery = true;
+					}
 				}
+			}else{
+				needToQuery = true;
 			}
 			if(needToQuery){
 				this->queryDatabase();
@@ -167,7 +165,6 @@ void Vehicle::CSMACA(){
 				}
 			}
 			this->CSMACAAlgorithm();
-			this->channelFound();
 
 			mode = 0;
 			break;
@@ -194,14 +191,34 @@ bool Vehicle::isCorrelationInfoExist(){
 		std::stringstream ss;
 		ss << " Correlation_used " << this->position;
 		
-		Logger::log(this->position, this->str() + ss.str()); 
+		//Logger::log(this->position, ss.str()); 
 		
 	}
 	return ret;
 }
 
 bool Vehicle::isCorrelationExist(){
-	double threshold = 0.3;
+	int useRealData = Setting::read().useRealData;
+	//std::cout << "use real data " << useRealData <<std::endl;
+	double threshold = 0.1;
+	if(useRealData==0){
+		threshold = 0.0 ;
+	}else if(useRealData==1){
+		double realData[] = {0.79761,0.39684,0.85163,0.93151,0.92774,0.89612,0.89522,0.88015,0.85232,0.74513,0.79761,0.39684,0.85163,0.93151,0.92774,0.89612,0.89522,0.88015,0.85232,0.74513,0.79761,0.39684,0.85163,0.93151,0.92774,0.89612,0.89522,0.88015,0.85232,0.74513};
+		int region = this->position / ( Setting::read().disappearPos / (sizeof(realData)/sizeof(double)) );
+		threshold = realData[region];
+		
+	}else if(useRealData==2){
+		double realData[] = {0.57486,0.55127,0.48648,0.346,0.5443,0.48969,0.57475,0.48329,0.38458,0.41518,0.57486,0.55127,0.48648,0.346,0.5443,0.48969,0.57475,0.48329,0.38458,0.41518,0.57486,0.55127,0.48648,0.346,0.5443,0.48969,0.57475,0.48329,0.38458,0.41518};
+		int region = this->position / ( Setting::read().disappearPos / (sizeof(realData)/sizeof(double)) );
+		threshold = realData[region];
+	}else if(useRealData==3){
+		double realData[] = {0.7241,0.52944,0.62816,0.31763,0.31582,0.29781,0.31764,0.29424,0.40051,0.28786,0.7241,0.52944,0.62816,0.31763,0.31582,0.29781,0.31764,0.29424,0.40051,0.28786,0.7241,0.52944,0.62816,0.31763,0.31582,0.29781,0.31764,0.29424,0.40051,0.28786};
+		int region = this->position / ( Setting::read().disappearPos / (sizeof(realData)/sizeof(double)) );
+		threshold = realData[region]/10;
+	}
+	//std::cout << "Threshold: " << threshold << std::endl;
+
 	double r = ((double)rand())/((double)RAND_MAX);
 	if(r<threshold){
 		return true;
@@ -211,7 +228,10 @@ bool Vehicle::isCorrelationExist(){
 }
 
 bool Vehicle::isWSRSSIGreaterThanTH(){
-	double threshold = 0.5;
+	double threshold = 0.4;
+	if(Setting::read().useRealData > 0){
+		//threshold = 0.2;
+	}
 	double r = ((double)rand())/((double)RAND_MAX);
 	if(r<threshold){
 		return true;
@@ -223,6 +243,9 @@ bool Vehicle::isWSRSSIGreaterThanTH(){
 
 bool Vehicle::isCellularRSSIGreaterThanTH(){
 	double threshold = 0.9;
+	if(Setting::read().useRealData > 0){
+//		threshold = 1;
+	}
 	double r = ((double)rand())/((double)RAND_MAX);
 	if(r<threshold){
 		return true;
@@ -233,7 +256,7 @@ bool Vehicle::isCellularRSSIGreaterThanTH(){
 
 void Vehicle::channelFound(){
 	
-	Logger::log(this->position, this->str() + " channel_found");
+	Logger::log(this->position, "channel_found");
 	
 	this->lastSenseTime = Timer::getCurrentTime();
 	this->lastSensePos	= this->position;
@@ -241,9 +264,8 @@ void Vehicle::channelFound(){
 
 void Vehicle::queryDatabase(){
 	
-	Logger::log(this->position, this->str() + " query_database");
+	Logger::log(this->position, "query_database");
 	
-
 	if(Setting::read().Algorithm.compare("PaperWithIA")==0){
 		this->sendPreamble();
 	}
@@ -251,7 +273,7 @@ void Vehicle::queryDatabase(){
 
 void Vehicle::broadcastCorrelation(){
 	
-	Logger::log(this->position, this->str() + " broadcast_correlation");
+	Logger::log(this->position, "broadcast_correlation");
 	
 	Environment::addCorrelationInfo(this->position);
 	// std::cout<<"broadcast! " <<Setting::read().Algorithm << std::endl;
@@ -265,23 +287,26 @@ void Vehicle::broadcastCorrelation(){
 void Vehicle::sendPreamble(){
 	// std::cout<<"sending preamble\n";
 	
-	Logger::log(this->position, this->str() + " send_pramble");
+	Logger::log(this->position, "send_preamble");
 	
 	Environment::receiveIAPreamble(this->id, this->position);
 
 }
 
 bool Vehicle::lookUpLocalSpectrumInfo(){
+	double localSpectrumInfoLifeTime = 8;
 	for(uint i=0; i<localSpectrumInfo.size(); i++){
 		if(
 			this->position > localSpectrumInfo[i].start
 			&& this->position < localSpectrumInfo[i].end
+			&& abs( localSpectrumInfo[i].time - Timer::getCurrentTime() )
+				< localSpectrumInfoLifeTime
 		  ){
-		  	std::stringstream ss;
-		  	ss << " Local_spectrum_available " 
-		  		<< localSpectrumInfo[i].start << "-"
-		  		<< localSpectrumInfo[i].end;
-		  	Logger::log(this->position, this->str() + ss.str());
+		  	//std::stringstream ss;
+		  	//ss << " Local_spectrum_available " 
+		  	//	<< localSpectrumInfo[i].start << "-"
+		  	//	<< localSpectrumInfo[i].end;
+		  	//Logger::log(this->position, this->str() + ss.str());
 			return true;
 		}
 	}
@@ -292,12 +317,13 @@ void Vehicle::addLocalSpectrumInfo(double start, double end){
 	KnownSpectrumRange ksr;
 	ksr.start = start;
 	ksr.end = end;
+	ksr.time = Timer::getCurrentTime();
 	this->localSpectrumInfo.push_back(ksr);
 	std::stringstream ss;
   	ss << " Local_spectrum_added " 
   		<< start << "-"
   		<< end;
-  	Logger::log(this->position, this->str() + ss.str());
+  	//Logger::log(this->position, this->str() + ss.str());
 }
 
 
@@ -313,14 +339,20 @@ void Vehicle::CSMACAAlgorithm(){
 	if(disabled) return;
 	switch(state){
 		case 0:
+			if(backoff_timer>0){
+				state = 2;
+				ss << "backoff";
+				Logger::log(this->position, ss.str());
+				break;
+			}
 			if(this->outputBuffer>0){
 				state = 1;
 				ifs_timer = default_difs;
 			}
 			break;
 		case 1: //DIFTS
-		   	ss << " difs ";	
-			Logger::log(this->position, this->str()+ss.str());
+		   	ss << "difs";	
+			Logger::log(this->position, ss.str());
 
 			if(Environment::isChannelOccupied()){
 				state = 2;
@@ -335,8 +367,8 @@ void Vehicle::CSMACAAlgorithm(){
 			}
 			break;
 		case 2: //backoff
-		    ss << " backoff ";	
-			Logger::log(this->position, this->str()+ss.str());
+		    ss << "backoff";	
+			Logger::log(this->position, ss.str());
 			if(!Environment::isChannelOccupied()){
 				backoff_timer--;
 				if(backoff_timer<0){
@@ -347,42 +379,43 @@ void Vehicle::CSMACAAlgorithm(){
 			}
 			break;
 		case 3: //transmitting
-			ss << " RTS ";	
-			Logger::log(this->position, this->str()+ss.str());
+			ss << "RTS";	
+			Logger::log(this->position, ss.str());
 			state = 4;
 			Environment::occupyChannel();
 			break;
 		case 4: //sift for CTS
-			ss << " sifs";
-			Logger::log(this->position, this->str()+ss.str());
+			ss << "sifs";
+			Logger::log(this->position, ss.str());
 			state = 5;
 			break;
 		case 5:
-			ss << "CTS ";
-			Logger::log(this->position, this->str()+ss.str());
+			ss << "CTS";
+			Logger::log(this->position, ss.str());
 			state = 6;
 			Environment::occupyChannel();
 			break;
 		case 6:
 			ss << "sifs";
-			Logger::log(this->position, this->str()+ss.str());
+			Logger::log(this->position, ss.str());
 			state = 7;
 			break;
 		case 7:
 			ss << "data";
-			Logger::log(this->position, this->str()+ss.str());
+			Logger::log(this->position, ss.str());
 			state = 8;
 			Environment::occupyChannel();
 			break;
 		case 8:
 			ss << "sifs";
-			Logger::log(this->position, this->str()+ss.str());
+			Logger::log(this->position, ss.str());
 			state = 9;
 			break;
 		case 9:
 			ss << "ack";
-			Logger::log(this->position, this->str()+ss.str());
+			Logger::log(this->position, ss.str());
 			Environment::occupyChannel();
+			this->channelFound();
 			this->outputBuffer--;
 			num_retry = 0;
 			state = 0;

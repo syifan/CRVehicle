@@ -21,6 +21,7 @@ public:
 	//vehicle related;
 	double disappearPos;
 	//vehicle generate parameter
+	double meanDist;
 	double lambda;
 	double speed;
 	double speedRange;
@@ -33,6 +34,8 @@ public:
 	double logStartPos;
 	double logEndPos;
 	std::string logName;
+	//whether or not use real data
+	int useRealData;
 
 private:
 	Setting();

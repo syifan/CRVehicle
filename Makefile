@@ -1,5 +1,5 @@
 all:
-	g++ -Wall -Werror -Wfatal-errors \
+	g++ -Wall -Werror -Wfatal-errors\
 		main.cc \
 		Timer.cc \
 		Vehicle.cc \

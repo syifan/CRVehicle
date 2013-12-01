@@ -34,6 +34,7 @@ void Environment::process(){
 	e.generatePoissonVehicles(e.vehicles);
 	for(uint i = 0; i<e.vehicles.size(); i++){
 		Vehicle& v = e.vehicles[i];
+		if(v.isDisabled()) continue;
 		v.move();
 		if(Setting::read().Algorithm.compare("PaperWithIA")==0){
 			v.paperAlgorithmWithIA();
@@ -71,7 +72,10 @@ void Environment::generateOneVehicle(std::vector<Vehicle> & vehicles){
 	//generate a vehicle	
 	Vehicle v(id, speed);
 	vehicles.push_back(v);
-	
+
+	std::stringstream ss;
+	ss<<"new";
+	Logger::log(ss.str());
 	
 	//increase global id.
 	id++;
@@ -79,11 +83,20 @@ void Environment::generateOneVehicle(std::vector<Vehicle> & vehicles){
 
 void Environment::addCorrelationInfo(double position){
 	Environment& e = Environment::getInstance();
-	if(e.lookUpCorrelationDatabaseAux(
-			position, 0, e.correlationDatabase.size()-1, 1
-		)
-	){
-		return;
+	if(e.correlationDatabase.size()>0){
+		int index = e.lookUpCorrelationDatabaseAux(
+				position, 0, e.correlationDatabase.size()-1, 1
+			);
+	//	std::cout << "index: "<< index << 
+	//		" max_index: " << e.correlationDatabase.size()-1 <<std::endl;
+		if(index>=0){
+			if((unsigned int)index>e.correlationDatabase.size()-1){
+				std::cerr << __FUNCTION__ << " Get invalid index" << std::endl;
+				exit(1);
+			}
+			e.correlationDatabase[index].updateTime();
+			return;
+		}
 	}
 	//get current time
 	double currentTime = Timer::getCurrentTime();
@@ -91,7 +104,17 @@ void Environment::addCorrelationInfo(double position){
 	CorrelationInfo ci(position, currentTime);
 	// put it in the database
 	e.correlationDatabase.push_back(ci);
-
+	/*	
+	int correlationLifeTime = 30;
+	for(uint i=0; i<e.correlationDatabase.size(); i++){
+		CorrelationInfo& ci = e.correlationDatabase[i];
+		if(abs(ci.getTime()-currentTime)>correlationLifeTime){
+			e.correlationDatabase.erase(
+				e.correlationDatabase.begin()+i
+			);
+		}
+	}
+	*/
 	std::sort(e.correlationDatabase.begin(), e.correlationDatabase.end());
 
 	//log this event
@@ -107,28 +130,43 @@ bool Environment::lookUpCorrelationDatabase(double position){
 	if(e.correlationDatabase.size()==0){
 		return false;
 	}
-	return e.lookUpCorrelationDatabaseAux(position, left, right);
+	if(e.lookUpCorrelationDatabaseAux(position, left, right)<0){
+		return false;
+	}else{
+		return true;
+	}
 }
 
 
-bool Environment::lookUpCorrelationDatabaseAux(
+int Environment::lookUpCorrelationDatabaseAux(
 	double position, int left, int right, double correlationMaxDist
 ){
+	double correlationLifeTime = 15;
 	//std::cout << "left: " << left << "right: "<< right << std::endl; 
 	int middle = (left+right)/2;
 	// If correlation info reported in correlationMaxDist meters, it is believed
 	// as correlation exist
 	//double correlationMaxDist = 100;
 	if(left>right || left<0 || right<0){
-		return false;
+		return -1;
 	}if(left==right){
-		return abs(correlationDatabase[left].getPosition() - position)
-			<correlationMaxDist;
+		if(
+			abs(correlationDatabase[left].getPosition() - position)
+				<correlationMaxDist &&
+			abs(correlationDatabase[left].getTime() - Timer::getCurrentTime())
+				< correlationLifeTime
+		){
+			return left;
+		}else{
+			return -1;
+		}
 	}else if(
 		abs(correlationDatabase[middle].getPosition() - position)
-			<correlationMaxDist
+			<correlationMaxDist &&
+		abs(correlationDatabase[middle].getTime() - Timer::getCurrentTime())
+			< correlationLifeTime
 	){
-		return true;
+		return middle;
 	}else{
 		if(correlationDatabase[middle].getPosition() < position){
 			return lookUpCorrelationDatabaseAux(position, middle+1, right);
@@ -143,7 +181,7 @@ void Environment::receiveIAPreamble(int vehicleId, double pos){
   	ss << " preamble_received " 
   		<< "from_Vehicle_" << vehicleId
   		<< " at_" << pos;
-  	Logger::log(ss.str());
+  	//Logger::log(ss.str());
 	Environment& e = Environment::getInstance();
 	for(unsigned int i=0; i<e.baseStations.size(); i++){
 		if(e.baseStations[i].inExtendCoverage(pos)){

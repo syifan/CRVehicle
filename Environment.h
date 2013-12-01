@@ -15,6 +15,9 @@ public:
 		this->position = position;
 		this->time = time;
 	}
+	void updateTime(){
+		this->time = Timer::getCurrentTime();
+	}
 	double getPosition(){
 		return this->position;
 	}
@@ -76,7 +79,7 @@ private:
 	void generatePoissonVehicles(std::vector<Vehicle> & vehicles);
 
 
-	bool lookUpCorrelationDatabaseAux(
+	int lookUpCorrelationDatabaseAux(
 		double position, int left, int right, double maxCorrelationDist=100
 	);
 
